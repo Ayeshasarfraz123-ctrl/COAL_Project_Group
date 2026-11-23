@@ -120,6 +120,231 @@ originalmap:
 ; --- WORKING MAP: a copy of the original (720 zero bytes for now) ---
 workmap:        times 720 db 0
 
+; --- where drawing goes (0xa000 = screen). Changes in Part 5 ---
+drawseg:        dw 0xa000
+
+; --- SPRITE: small Mario standing, 16x16 ---
+spr_mario_stand:
+                db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
+                db 0,0,0,4,4,4,4,4,4,4,4,0,0,0,0,0
+                db 0,0,0,6,6,6,12,12,6,12,0,0,0,0,0,0
+                db 0,0,6,12,6,12,12,12,6,12,12,12,0,0,0,0
+                db 0,0,6,12,6,6,12,12,12,6,12,12,12,0,0,0
+                db 0,0,0,6,12,12,12,12,6,6,6,6,0,0,0,0
+                db 0,0,0,0,12,12,12,12,12,12,12,0,0,0,0,0
+                db 0,0,0,4,4,1,4,4,4,0,0,0,0,0,0,0
+                db 0,0,4,4,4,1,4,4,1,4,4,4,0,0,0,0
+                db 0,4,4,4,4,1,1,1,1,4,4,4,4,0,0,0
+                db 0,12,12,4,1,14,1,1,14,1,4,12,12,0,0,0
+                db 0,12,12,12,1,1,1,1,1,1,12,12,12,0,0,0
+                db 0,12,12,1,1,1,1,1,1,1,1,12,12,0,0,0
+                db 0,0,0,1,1,1,0,0,1,1,1,0,0,0,0,0
+                db 0,0,6,6,6,0,0,0,0,6,6,6,0,0,0,0
+                db 0,6,6,6,6,0,0,0,0,6,6,6,6,0,0,0
+
+; --- SPRITE: Goomba walking, 16x16 ---
+spr_goomba:
+                db 0,0,0,0,0,0,6,6,6,6,0,0,0,0,0,0
+                db 0,0,0,0,6,6,6,6,6,6,6,6,0,0,0,0
+                db 0,0,0,6,6,6,6,6,6,6,6,6,6,0,0,0
+                db 0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0
+                db 0,6,6,6,15,15,6,6,6,6,15,15,6,6,6,0
+                db 0,6,6,15,15,15,6,6,6,6,15,15,15,6,6,0
+                db 0,6,6,15,8,15,6,6,6,6,15,8,15,6,6,0
+                db 0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0
+                db 0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0
+                db 0,0,0,0,6,6,14,14,14,14,6,6,0,0,0,0
+                db 0,0,0,0,0,14,14,14,14,14,14,0,0,0,0,0
+                db 0,0,0,0,14,14,14,14,14,14,14,14,0,0,0,0
+                db 0,0,0,0,0,14,14,14,14,14,14,0,0,0,0,0
+                db 0,0,0,8,8,8,8,0,0,8,8,8,8,0,0,0
+                db 0,0,8,8,8,8,8,0,0,8,8,8,8,8,0,0
+                db 0,0,8,8,8,8,0,0,0,0,8,8,8,8,0,0
+
+; --- SPRITE: small Mario running, 16x16 ---
+spr_mario_run:
+                db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
+                db 0,0,0,4,4,4,4,4,4,4,4,0,0,0,0,0
+                db 0,0,0,6,6,6,12,12,6,12,0,0,0,0,0,0
+                db 0,0,6,12,6,12,12,12,6,12,12,12,0,0,0,0
+                db 0,0,6,12,6,6,12,12,12,6,12,12,12,0,0,0
+                db 0,0,0,6,12,12,12,12,6,6,6,6,0,0,0,0
+                db 0,0,0,0,12,12,12,12,12,12,12,0,0,0,0,0
+                db 0,0,0,4,4,4,1,4,4,4,0,0,0,0,0,0
+                db 0,0,4,4,4,4,1,1,4,4,4,0,0,0,0,0
+                db 0,12,12,4,4,1,1,1,1,1,4,0,0,0,0,0
+                db 0,12,12,12,1,1,1,1,1,1,1,0,0,0,0,0
+                db 0,0,12,12,1,1,1,1,1,1,1,0,0,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0
+                db 0,0,6,6,1,1,1,0,1,1,6,6,0,0,0,0
+                db 0,6,6,6,0,0,0,0,0,0,6,6,6,0,0,0
+                db 0,6,6,0,0,0,0,0,0,0,0,0,6,6,0,0
+
+; --- SPRITE: small Mario jumping, 16x16 ---
+spr_mario_jump:
+                db 0,0,0,0,4,4,4,4,4,0,0,0,0,12,12,0
+                db 0,0,0,4,4,4,4,4,4,4,4,0,0,12,12,12
+                db 0,0,0,6,6,6,12,12,6,12,0,0,0,12,12,0
+                db 0,0,6,12,6,12,12,12,6,12,12,12,0,0,0,0
+                db 0,0,6,12,6,6,12,12,12,6,12,12,12,0,0,0
+                db 0,0,0,6,12,12,12,12,6,6,6,6,0,0,0,0
+                db 0,0,0,0,12,12,12,12,12,12,12,0,0,0,0,0
+                db 0,0,4,4,4,4,1,4,4,4,4,4,0,0,0,0
+                db 0,4,4,4,4,4,1,1,4,4,4,4,4,0,0,0
+                db 0,12,12,4,4,1,1,1,1,1,1,4,4,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0
+                db 0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0
+                db 0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0
+                db 0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0
+                db 0,6,6,6,6,0,0,0,0,0,0,6,6,6,6,0
+                db 0,6,6,6,6,0,0,0,0,0,0,6,6,6,6,0
+
+; --- SPRITE: Super Mario top half (16x16), used for all poses ---
+spr_super_top:
+                db 0,0,0,0,0,4,4,4,4,4,0,0,0,0,0,0
+                db 0,0,0,0,4,4,4,4,4,4,4,4,0,0,0,0
+                db 0,0,0,0,6,6,6,12,12,6,12,0,0,0,0,0
+                db 0,0,0,6,12,6,12,12,12,6,12,12,12,0,0,0
+                db 0,0,0,6,12,6,6,12,12,12,6,12,12,12,0,0
+                db 0,0,0,0,6,12,12,12,12,6,6,6,6,0,0,0
+                db 0,0,0,0,0,12,12,12,12,12,12,12,0,0,0,0
+                db 0,0,0,0,4,4,4,1,4,4,4,0,0,0,0,0
+                db 0,0,0,4,4,4,4,1,4,4,1,4,4,4,0,0
+                db 0,4,4,4,4,4,4,1,1,1,1,4,4,4,4,0
+                db 0,12,12,4,4,1,14,1,1,14,1,4,4,12,12,0
+                db 0,12,12,12,1,1,1,1,1,1,1,1,12,12,12,0
+                db 0,12,12,12,1,1,1,1,1,1,1,1,12,12,12,0
+                db 0,12,12,1,1,1,1,1,1,1,1,1,1,12,12,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+
+; --- SPRITE: Super Mario bottom half, standing ---
+spr_super_stand_bot:
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,0,0,1,1,1,1,0,0,0
+                db 0,0,6,6,6,6,6,0,0,6,6,6,6,6,0,0
+                db 0,6,6,6,6,6,6,0,0,6,6,6,6,6,6,0
+                db 0,6,6,6,6,6,6,0,0,6,6,6,6,6,6,0
+
+; --- SPRITE: Super Mario bottom half, running ---
+spr_super_run_bot:
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,1,1,1,1,1,0,0,0,1,1,1,1,0,0
+                db 0,0,1,1,1,1,1,0,0,0,1,1,1,1,0,0
+                db 0,0,1,1,1,1,1,0,0,0,1,1,1,1,0,0
+                db 0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0
+                db 0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0
+                db 0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0
+                db 0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0
+                db 0,6,6,6,6,6,0,0,0,0,0,0,6,6,6,6
+                db 6,6,6,6,6,6,0,0,0,0,0,0,6,6,6,0
+                db 6,6,6,6,6,6,0,0,0,0,0,0,6,6,6,0
+
+; --- SPRITE: Super Mario bottom half, jumping ---
+spr_super_jump_bot:
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0
+                db 0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0
+                db 0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0
+                db 0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0
+                db 1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1
+                db 1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1
+                db 1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1
+                db 1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1
+                db 6,6,6,6,6,0,0,0,0,0,0,0,6,6,6,6
+                db 6,6,6,6,6,6,0,0,0,0,0,0,0,6,6,6
+                db 6,6,6,6,6,6,0,0,0,0,0,0,0,6,6,6
+
+; --- SPRITE: Goomba flattened, 16x16 ---
+spr_goomba_flat:
+                times 160 db 0
+                db 0,0,0,6,6,6,6,6,6,6,6,6,6,0,0,0
+                db 0,0,6,6,6,6,6,6,6,6,6,6,6,6,0,0
+                db 0,6,6,15,15,6,6,6,6,6,15,15,6,6,6,0
+                db 0,6,6,6,6,6,6,6,6,6,6,6,6,6,6,0
+                db 0,0,8,8,8,8,14,14,14,14,8,8,8,8,0,0
+                db 0,0,8,8,8,8,8,8,8,8,8,8,8,8,0,0
+
+; --- SPRITE: Koopa Troopa, 16x16 ---
+spr_koopa:
+                db 0,0,0,0,0,0,0,0,0,0,14,14,14,0,0,0
+                db 0,0,0,0,0,0,0,0,0,14,14,14,14,14,0,0
+                db 0,0,0,0,0,0,0,0,0,14,15,8,14,14,0,0
+                db 0,0,0,0,0,0,0,0,0,14,14,14,14,14,0,0
+                db 0,0,0,0,0,0,0,0,14,14,14,14,0,0,0,0
+                db 0,0,0,2,2,2,2,2,2,14,14,0,0,0,0,0
+                db 0,0,2,2,15,15,2,2,15,15,2,14,0,0,0,0
+                db 0,0,2,2,15,15,2,2,15,15,2,2,0,0,0,0
+                db 0,0,2,2,2,2,2,2,2,2,2,2,0,0,0,0
+                db 0,0,0,2,2,2,2,2,2,2,2,0,0,0,0,0
+                db 0,0,0,14,14,14,14,14,14,14,14,0,0,0,0,0
+                db 0,0,0,0,14,14,14,14,14,14,0,0,0,0,0,0
+                db 0,0,0,14,14,14,0,0,14,14,14,0,0,0,0,0
+                db 0,0,0,14,14,14,0,0,14,14,14,0,0,0,0,0
+                db 0,6,6,6,6,6,0,0,0,6,6,6,6,6,0,0
+                db 0,6,6,6,6,6,0,0,0,6,6,6,6,6,0,0
+
+; --- SPRITE: Koopa shell, 16x16 ---
+spr_shell:
+                times 128 db 0
+                db 0,0,0,0,0,2,2,2,2,2,2,0,0,0,0,0
+                db 0,0,0,0,2,2,15,2,2,15,2,2,0,0,0,0
+                db 0,0,0,2,2,2,15,2,2,15,2,2,2,0,0,0
+                db 0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0
+                db 0,0,2,2,2,2,2,2,2,2,2,2,2,2,0,0
+                db 0,0,14,14,2,2,2,2,2,2,2,2,14,14,0,0
+                db 0,0,0,14,14,14,14,14,14,14,14,14,14,0,0,0
+                db 0,0,0,0,14,14,14,14,14,14,14,14,0,0,0,0
+
+; --- SPRITE: mushroom power-up, 16x16 ---
+spr_mushroom:
+                db 0,0,0,0,0,4,4,4,4,4,4,0,0,0,0,0
+                db 0,0,0,4,4,4,15,15,4,4,4,4,0,0,0,0
+                db 0,0,4,4,15,15,15,15,4,4,4,15,15,4,0,0
+                db 0,4,4,4,15,15,15,15,4,4,4,4,15,4,4,0
+                db 0,4,4,4,4,15,15,4,4,4,4,4,4,4,4,0
+                db 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
+                db 4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4
+                db 0,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0
+                db 0,4,4,4,4,4,4,4,4,4,4,4,4,4,4,0
+                db 0,0,0,0,15,15,15,15,15,15,15,15,0,0,0,0
+                db 0,0,0,0,15,0,0,15,15,0,0,15,0,0,0,0
+                db 0,0,0,0,15,0,0,15,15,0,0,15,0,0,0,0
+                db 0,0,0,0,15,15,15,15,15,15,15,15,0,0,0,0
+                db 0,0,0,0,15,15,15,15,15,15,15,15,0,0,0,0
+                db 0,0,0,0,15,15,15,15,15,15,15,15,0,0,0,0
+                db 0,0,0,0,15,15,15,15,15,15,15,15,0,0,0,0
+
+; --- SPRITE: coin, 16x16 ---
+spr_coin:
+                times 16 db 0
+                db 0,0,0,0,0,0,14,14,14,14,0,0,0,0,0,0
+                db 0,0,0,0,0,14,14,14,14,14,14,0,0,0,0,0
+                times 10 db 0,0,0,0,14,14,14,6,6,14,14,14,0,0,0,0
+                db 0,0,0,0,0,14,14,14,14,14,14,0,0,0,0,0
+                db 0,0,0,0,0,0,14,14,14,14,0,0,0,0,0,0
+                times 16 db 0
+
 ; ------------------------------------------------------------
 ; PROCEDURE: clrscr
 ; Purpose : clears the text screen
@@ -499,29 +724,250 @@ nextmapcol:     mov al, dl
                 pop bp
                 ret 2
 ; ------------------------------------------------------------
-; MAIN - Part 3 test: draws the map 3 times
+; PROCEDURE: drawsprite
+; Purpose : draws a 16x16 sprite, colour 0 is transparent
+;           pixels outside the screen are skipped (clipping)
+; Inputs  : [bp+10] = x, [bp+8] = y (can be negative),
+;           [bp+6] = address of sprite, [bp+4] = flags
+;           (flags bit 0 = 1 means mirrored, facing left)
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+drawsprite:     push bp
+                mov bp, sp
+                push es
+                push ax
+                push bx
+                push cx
+                push dx
+                push si
+                push di
+
+                mov ax, [drawseg]
+                mov es, ax
+                mov si, [bp+6]          ; si = sprite data
+                mov dx, 0               ; dx = sprite row (0 to 15)
+
+sprow:          mov ax, [bp+8]
+                add ax, dx              ; ax = screen y of this row
+                cmp ax, 0
+                jl nextsprow            ; above the screen
+                cmp ax, 200
+                jge nextsprow           ; below the screen
+
+                mov bx, ax
+                mov cl, 8
+                shl ax, cl              ; y*256
+                mov cl, 6
+                shl bx, cl              ; y*64
+                add ax, bx
+                mov di, ax              ; di = y*320
+
+                mov cx, 0               ; cx = sprite column (0 to 15)
+
+spcol:          mov bx, [bp+10]
+                add bx, cx              ; bx = screen x of this pixel
+                cmp bx, 0
+                jl nextspcol            ; left of the screen
+                cmp bx, 320
+                jge nextspcol           ; right of the screen
+
+                push bx                 ; save screen x
+                mov bx, cx              ; bx = source column
+                test word [bp+4], 1
+                jz nomirror
+                mov bx, 15
+                sub bx, cx              ; mirrored: 15 - column
+nomirror:       mov ax, dx
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1               ; ax = row * 16
+                add ax, bx
+                mov bx, ax
+                mov al, [si+bx]         ; al = colour
+                pop bx                  ; bx = screen x
+
+                cmp al, 0
+                je nextspcol            ; transparent
+
+                push di
+                add di, bx
+                mov [es:di], al
+                pop di
+
+nextspcol:      inc cx
+                cmp cx, 16
+                jne spcol
+
+nextsprow:      inc dx
+                cmp dx, 16
+                jne sprow
+
+                pop di
+                pop si
+                pop dx
+                pop cx
+                pop bx
+                pop ax
+                pop es
+                pop bp
+                ret 8
+; ------------------------------------------------------------
+; PROCEDURE: drawsuper
+; Purpose : draws Super Mario (16x32) = top half + bottom half
+; Inputs  : [bp+10] = x, [bp+8] = y (top of sprite),
+;           [bp+6] = address of the bottom half, [bp+4] = flags
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+drawsuper:      push bp
+                mov bp, sp
+                push ax
+
+                push word [bp+10]       ; top half
+                push word [bp+8]
+                mov ax, spr_super_top
+                push ax
+                push word [bp+4]
+                call drawsprite
+
+                push word [bp+10]       ; bottom half, 16 pixels lower
+                mov ax, [bp+8]
+                add ax, 16
+                push ax
+                push word [bp+6]
+                push word [bp+4]
+                call drawsprite
+
+                pop ax
+                pop bp
+                ret 8
+; ------------------------------------------------------------
+; MAIN - Part 4 test: all sprites
 ; ------------------------------------------------------------
 start:          mov ax, 0x0013          ; VGA mode 13h
                 int 0x10
 
                 call resetmap
-
-                mov ax, 0               ; screen 1: columns 0 to 19
+                mov ax, 0
                 push ax
                 call drawmap
-                mov ah, 0x00
-                int 0x16
 
-                mov ax, 20              ; screen 2: columns 20 to 39
+                ; --- row 1 (y=40): Mario run, Mario jump ---
+                mov ax, 20
                 push ax
-                call drawmap
-                mov ah, 0x00
-                int 0x16
+                mov ax, 40
+                push ax
+                mov ax, spr_mario_run
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
 
-                mov ax, 40              ; screen 3: columns 40 to 59
+                mov ax, 50
                 push ax
-                call drawmap
-                mov ah, 0x00
+                mov ax, 40
+                push ax
+                mov ax, spr_mario_jump
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                ; --- row 2 (y=70): goomba flat, koopa, shell, mushroom, coin ---
+                mov ax, 20
+                push ax
+                mov ax, 70
+                push ax
+                mov ax, spr_goomba_flat
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                mov ax, 50
+                push ax
+                mov ax, 70
+                push ax
+                mov ax, spr_koopa
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                mov ax, 80
+                push ax
+                mov ax, 70
+                push ax
+                mov ax, spr_shell
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                mov ax, 110
+                push ax
+                mov ax, 70
+                push ax
+                mov ax, spr_mushroom
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                mov ax, 140
+                push ax
+                mov ax, 70
+                push ax
+                mov ax, spr_coin
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                ; --- row 3 (y=100): Super Mario stand, run, jump, mirrored ---
+                mov ax, 20
+                push ax
+                mov ax, 100
+                push ax
+                mov ax, spr_super_stand_bot
+                push ax
+                mov ax, 0
+                push ax
+                call drawsuper
+
+                mov ax, 50
+                push ax
+                mov ax, 100
+                push ax
+                mov ax, spr_super_run_bot
+                push ax
+                mov ax, 0
+                push ax
+                call drawsuper
+
+                mov ax, 80
+                push ax
+                mov ax, 100
+                push ax
+                mov ax, spr_super_jump_bot
+                push ax
+                mov ax, 0
+                push ax
+                call drawsuper
+
+                mov ax, 110
+                push ax
+                mov ax, 100
+                push ax
+                mov ax, spr_super_stand_bot
+                push ax
+                mov ax, 1
+                push ax
+                call drawsuper
+
+                mov ah, 0x00            ; wait for a key
                 int 0x16
 
                 mov ax, 0x0003          ; back to text mode

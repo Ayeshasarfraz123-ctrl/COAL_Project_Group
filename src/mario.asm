@@ -23,6 +23,103 @@ game_time:      dw 300
 message:        db 'Super Mario Engine - Part 1 OK'
 length:         dw 30
 
+; --- tile colours, one byte per tile code (0 to 12) ---
+tilecolour:     db 9,6,4,14,14,8,2,2,2,2,7,9,9
+
+; --- camera (first visible column, used in Part 3 only) ---
+first_col:      dw 0
+
+; --- ORIGINAL MAP: 60 columns x 12 rows, never changed ---
+; each line below = 10 columns, each row = 6 lines
+originalmap:
+; row 0 (HUD)
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+; row 1
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+; row 2
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,12,0,0
+; row 3
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,12,0,0
+; row 4
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,12,0,0
+; row 5
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,12,0,0
+; row 6
+                db 0,0,0,0,0,0,0,0,4,0
+                db 3,0,0,2,3,2,3,2,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 2,4,2,2,2,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,10,0,0,0,12,0,0
+; row 7
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,11,11,11,11,0,0,0,0,0
+                db 0,0,0,0,0,6,7,0,0,0
+                db 0,11,11,11,0,0,0,0,0,0
+                db 0,0,10,10,0,0,0,12,0,0
+; row 8
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,6,7
+                db 0,0,0,0,0,8,9,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,10,10,10,0,0,0,12,0,0
+; row 9 (Mario stands here)
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 0,0,0,0,0,11,11,11,8,9
+                db 0,0,0,0,0,8,9,0,0,0
+                db 0,0,0,0,0,0,0,0,0,0
+                db 10,10,10,10,0,0,0,10,0,0
+; row 10 (ground)
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,1,0,0,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,0,0,0,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+; row 11 (ground)
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,1,0,0,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+                db 1,0,0,0,1,1,1,1,1,1
+                db 1,1,1,1,1,1,1,1,1,1
+
+; --- WORKING MAP: a copy of the original (720 zero bytes for now) ---
+workmap:        times 720 db 0
+
 ; ------------------------------------------------------------
 ; PROCEDURE: clrscr
 ; Purpose : clears the text screen
@@ -177,124 +274,254 @@ nextrow:        mov cx, [bp+8]          ; cx = width
                 ret 10
 
 ; ------------------------------------------------------------
-; MAIN - Part 2 test screen
+; PROCEDURE: resetmap
+; Purpose : copies the original map into the working map
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
 ; ------------------------------------------------------------
-start:          mov ax, 0x0013          ; VGA mode 13h
-                int 0x10
+resetmap:       push es
+                push cx
+                push si
+                push di
 
-                ; sky: x=0 y=0 w=320 h=200 colour=9
-                mov ax, 0
+                push ds
+                pop es                  ; es = ds
+                cld
+                mov si, originalmap
+                mov di, workmap
+                mov cx, 720
+                rep movsb
+
+                pop di
+                pop si
+                pop cx
+                pop es
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: gettile
+; Purpose : gives the tile code at a pixel position
+; Inputs  : [bp+6] = px, [bp+4] = py
+; Outputs : ax = tile code (0 if outside the map height)
+; Changes : only ax
+; ------------------------------------------------------------
+gettile:        push bp
+                mov bp, sp
+                push bx
+                push si
+
+                mov ax, 0               ; default answer = sky
+                mov bx, [bp+4]          ; bx = py
+                cmp bx, 192
+                jae gettile_end         ; outside the map
+
+                shr bx, 1
+                shr bx, 1
+                shr bx, 1
+                shr bx, 1               ; bx = row
+                mov al, 60
+                mul bl                  ; ax = row * 60
+                mov si, [bp+6]          ; si = px
+                shr si, 1
+                shr si, 1
+                shr si, 1
+                shr si, 1               ; si = column
+                add si, ax              ; si = row*60 + column
+                mov al, [workmap+si]
+                mov ah, 0
+
+gettile_end:    pop si
+                pop bx
+                pop bp
+                ret 4
+
+; ------------------------------------------------------------
+; PROCEDURE: drawtile
+; Purpose : draws one 16x16 tile
+; Inputs  : [bp+8] = x, [bp+6] = y, [bp+4] = tile code
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+drawtile:       push bp
+                mov bp, sp
+                push ax
+                push bx
+
+                mov bx, [bp+4]          ; bx = tile code
+                cmp bx, 0
+                je tile_sky
+                cmp bx, 11
+                je tile_coin
+                cmp bx, 12
+                je tile_pole
+
+                ; solid tile: black border, then coloured inside
+                push word [bp+8]
+                push word [bp+6]
+                mov ax, 16
+                push ax
                 push ax
                 mov ax, 0
                 push ax
-                mov ax, 320
+                call fillrect
+
+                mov ax, [bp+8]
+                add ax, 1
                 push ax
-                mov ax, 200
+                mov ax, [bp+6]
+                add ax, 1
+                push ax
+                mov ax, 14
+                push ax
+                push ax
+                mov al, [tilecolour+bx]
+                mov ah, 0
+                push ax
+                call fillrect
+                jmp tile_done
+
+tile_sky:       push word [bp+8]
+                push word [bp+6]
+                mov ax, 16
+                push ax
+                push ax
+                mov ax, 9
+                push ax
+                call fillrect
+                jmp tile_done
+
+tile_coin:      push word [bp+8]        ; sky behind the coin
+                push word [bp+6]
+                mov ax, 16
+                push ax
                 push ax
                 mov ax, 9
                 push ax
                 call fillrect
 
-                ; grass: x=0 y=160 w=320 h=16 colour=2
-                mov ax, 0
+                mov ax, [bp+8]          ; yellow coin
+                add ax, 5
                 push ax
-                mov ax, 160
-                push ax
-                mov ax, 320
-                push ax
-                mov ax, 16
-                push ax
-                mov ax, 2
-                push ax
-                call fillrect
-
-                ; ground: x=0 y=176 w=320 h=24 colour=6
-                mov ax, 0
-                push ax
-                mov ax, 176
-                push ax
-                mov ax, 320
-                push ax
-                mov ax, 24
+                mov ax, [bp+6]
+                add ax, 3
                 push ax
                 mov ax, 6
                 push ax
-                call fillrect
-
-                ; red box: x=50 y=100 w=16 h=16 colour=4
-                mov ax, 50
-                push ax
-                mov ax, 100
-                push ax
-                mov ax, 16
-                push ax
-                mov ax, 16
-                push ax
-                mov ax, 4
-                push ax
-                call fillrect
-
-                ; yellow box: x=100 y=80 w=32 h=16 colour=14
-                mov ax, 100
-                push ax
-                mov ax, 80
-                push ax
-                mov ax, 32
-                push ax
-                mov ax, 16
+                mov ax, 10
                 push ax
                 mov ax, 14
                 push ax
                 call fillrect
+                jmp tile_done
 
-                ; white box: x=200 y=100 w=16 h=32 colour=15
-                mov ax, 200
-                push ax
-                mov ax, 100
-                push ax
+tile_pole:      push word [bp+8]        ; sky behind the pole
+                push word [bp+6]
                 mov ax, 16
                 push ax
-                mov ax, 32
+                push ax
+                mov ax, 9
+                push ax
+                call fillrect
+
+                mov ax, [bp+8]          ; white pole
+                add ax, 7
+                push ax
+                push word [bp+6]
+                mov ax, 2
+                push ax
+                mov ax, 16
                 push ax
                 mov ax, 15
                 push ax
                 call fillrect
 
-                ; three white pixels: (10,10) (11,10) (12,10)
-                mov ax, 10
-                push ax
-                mov ax, 10
-                push ax
-                mov ax, 15
-                push ax
-                call putpixel
+tile_done:      pop bx
+                pop ax
+                pop bp
+                ret 6
 
-                mov ax, 11
+; ------------------------------------------------------------
+; PROCEDURE: drawmap
+; Purpose : draws 20 columns of the working map, rows 1 to 11
+; Inputs  : [bp+4] = first column to draw (0 to 40)
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+drawmap:        push bp
+                mov bp, sp
                 push ax
-                mov ax, 10
-                push ax
-                mov ax, 15
-                push ax
-                call putpixel
+                push bx
+                push cx
+                push dx
+                push si
 
-                mov ax, 12
-                push ax
-                mov ax, 10
-                push ax
-                mov ax, 15
-                push ax
-                call putpixel
+                mov dx, 1               ; dx = row (1 to 11)
+nextmaprow:     mov cx, 0               ; cx = screen column (0 to 19)
 
-                ; red pixel in the bottom right corner (319,199)
-                mov ax, 319
-                push ax
-                mov ax, 199
-                push ax
-                mov ax, 4
-                push ax
-                call putpixel
+nextmapcol:     mov al, dl
+                mov bl, 60
+                mul bl                  ; ax = row * 60
+                add ax, [bp+4]          ; + first column
+                add ax, cx              ; + screen column
+                mov si, ax
+                mov al, [workmap+si]    ; al = tile code
+                mov ah, 0
 
-                mov ah, 0x00            ; wait for a key
+                mov bx, cx
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1               ; bx = x = column * 16
+                push bx
+                mov bx, dx
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1               ; bx = y = row * 16
+                push bx
+                push ax                 ; tile code
+                call drawtile
+
+                inc cx
+                cmp cx, 20
+                jne nextmapcol
+
+                inc dx
+                cmp dx, 12
+                jne nextmaprow
+
+                pop si
+                pop dx
+                pop cx
+                pop bx
+                pop ax
+                pop bp
+                ret 2
+; ------------------------------------------------------------
+; MAIN - Part 3 test: draws the map 3 times
+; ------------------------------------------------------------
+start:          mov ax, 0x0013          ; VGA mode 13h
+                int 0x10
+
+                call resetmap
+
+                mov ax, 0               ; screen 1: columns 0 to 19
+                push ax
+                call drawmap
+                mov ah, 0x00
+                int 0x16
+
+                mov ax, 20              ; screen 2: columns 20 to 39
+                push ax
+                call drawmap
+                mov ah, 0x00
+                int 0x16
+
+                mov ax, 40              ; screen 3: columns 40 to 59
+                push ax
+                call drawmap
+                mov ah, 0x00
                 int 0x16
 
                 mov ax, 0x0003          ; back to text mode

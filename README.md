@@ -87,6 +87,7 @@ The enemies also have an original table (`enemies\\\_orig`) and a working table 
 The keyboard state is a 128-byte table (`keystate`): one byte per scan code, 1 = held.
 ---
 7. Game states (and debug keys)
+All states were tested in the live demo.
 The game is driven by the variable `state` and a jump table (`statetable`) with one handler per state. The procedure `runstate` calls the handler of the current state once per frame.
 No.	State	Entered when	Left when
 0	TITLE	Program start, after Game over, after Level complete, Esc while playing	Enter on START -> PLAYING. Enter on EXIT or Esc -> EXIT
@@ -110,6 +111,7 @@ Check death (damage, pit, time) and the flag pole
 Update the camera
 Clear the frame buffer and draw the background, tiles, items, enemies, Mario and the HUD
 Copy the frame buffer to video memory
+
 ---
 8. Modules, procedures and why they exist
 Every procedure has a comment block with its name, purpose, inputs, outputs and the registers it changes.

@@ -169,6 +169,9 @@ space_prev:     dw 0            ; 1 if Space was held in the last frame
 ; --- camera: world x of the left edge of the screen ---
 camera_x:       dw 0
 
+; --- hero hitbox height (16 = small Mario, 32 = Super Mario later) ---
+hero_h:         dw 16
+
 ; --- SPRITE: small Mario standing, 16x16 ---
 spr_mario_stand:
                 db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
@@ -1313,6 +1316,191 @@ addfixed:       push bp
                 ret 6
 
 ; ------------------------------------------------------------
+; PROCEDURE: issolid
+; Purpose : tells if the tile at a pixel position is solid
+;           (codes 1 to 10 are solid, 0, 11 and 12 are not)
+; Inputs  : [bp+6] = px, [bp+4] = py
+; Outputs : ax = 1 if solid, 0 if not
+; Changes : only ax
+; ------------------------------------------------------------
+issolid:        push bp
+                mov bp, sp
+
+                push word [bp+6]
+                push word [bp+4]
+                call gettile            ; ax = tile code
+                cmp ax, 0
+                je is_no
+                cmp ax, 11
+                je is_no
+                cmp ax, 12
+                je is_no
+                mov ax, 1
+                jmp is_end
+is_no:          mov ax, 0
+is_end:         pop bp
+                ret 4
+
+; ------------------------------------------------------------
+; PROCEDURE: collidex
+; Purpose : walls. If Mario moved into a solid tile sideways,
+;           put him next to the wall and stop him
+; Inputs  : hero variables
+; Outputs : hero_x, hero_xf, hero_vx may change
+; Changes : no register is changed
+; ------------------------------------------------------------
+collidex:       push ax
+                push bx
+                push dx
+
+                mov dx, [hero_x]
+                cmp word [hero_vx], 0
+                je colx_end             ; not moving sideways
+                jl colx_left
+                add dx, 13              ; moving right: right edge
+                jmp colx_check
+colx_left:      add dx, 2               ; moving left: left edge
+
+colx_check:     push dx                 ; point 1: top
+                mov ax, [hero_y]
+                sub ax, [hero_h]
+                push ax
+                call issolid
+                cmp ax, 1
+                je colx_hit
+
+                push dx                 ; point 2: middle
+                mov ax, [hero_h]
+                shr ax, 1
+                mov bx, [hero_y]
+                sub bx, ax
+                push bx
+                call issolid
+                cmp ax, 1
+                je colx_hit
+
+                push dx                 ; point 3: bottom
+                mov ax, [hero_y]
+                dec ax
+                push ax
+                call issolid
+                cmp ax, 1
+                je colx_hit
+                jmp colx_end
+
+colx_hit:       mov bx, dx
+                shr bx, 1
+                shr bx, 1
+                shr bx, 1
+                shr bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1               ; bx = x of the wall tile
+                cmp word [hero_vx], 0
+                jl colx_hitleft
+                sub bx, 14              ; stand left of the wall
+                jmp colx_set
+colx_hitleft:   add bx, 14              ; stand right of the wall
+colx_set:       mov [hero_x], bx
+                mov word [hero_xf], 0
+                mov word [hero_vx], 0
+
+colx_end:       pop dx
+                pop bx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: collidey
+; Purpose : floor and ceiling. Falling: stand on a solid tile
+;           and set on_ground. Rising: hit the head and stop.
+; Inputs  : hero variables
+; Outputs : hero_y, hero_yf, hero_vy, on_ground may change
+; Changes : no register is changed
+; ------------------------------------------------------------
+collidey:       push ax
+                push bx
+                push dx
+
+                mov word [on_ground], 0
+                cmp word [hero_vy], 0
+                jl coly_up
+
+                ; ---- falling: look at the tiles under the feet ----
+                mov ax, [hero_x]
+                add ax, 2
+                push ax
+                push word [hero_y]
+                call issolid
+                cmp ax, 1
+                je coly_land
+
+                mov ax, [hero_x]
+                add ax, 13
+                push ax
+                push word [hero_y]
+                call issolid
+                cmp ax, 1
+                je coly_land
+                jmp coly_end
+
+coly_land:      mov ax, [hero_y]
+                shr ax, 1
+                shr ax, 1
+                shr ax, 1
+                shr ax, 1
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1               ; top of the tile = floor
+                mov [hero_y], ax
+                mov word [hero_yf], 0
+                mov word [hero_vy], 0
+                mov word [on_ground], 1
+                jmp coly_end
+
+                ; ---- rising: look at the tiles above the head ----
+coly_up:        mov dx, [hero_y]
+                sub dx, [hero_h]        ; dx = y of the top of Mario
+
+                mov bx, [hero_x]
+                add bx, 2
+                push bx
+                push dx
+                call issolid
+                cmp ax, 1
+                je coly_head
+
+                mov bx, [hero_x]
+                add bx, 13
+                push bx
+                push dx
+                call issolid
+                cmp ax, 1
+                je coly_head
+                jmp coly_end
+
+coly_head:      mov ax, dx
+                shr ax, 1
+                shr ax, 1
+                shr ax, 1
+                shr ax, 1
+                inc ax                  ; row below the solid tile
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1
+                shl ax, 1               ; y of the bottom of that tile
+                add ax, [hero_h]        ; feet = top + height
+                mov [hero_y], ax
+                mov word [hero_yf], 0
+                mov word [hero_vy], 0
+
+coly_end:       pop dx
+                pop bx
+                pop ax
+                ret
+; ------------------------------------------------------------
 ; PROCEDURE: updatehero
 ; Purpose : reads the keys, changes speed, moves Mario
 ;           (temporary floor at y=160, walls at x=0 and x=304)
@@ -1405,6 +1593,7 @@ uh_vyok:        mov [hero_vy], ax
                 push ax
                 push word [hero_vx]
                 call addfixed
+                call collidex
 
                 ; ---- move y ----
                 mov ax, hero_y
@@ -1413,6 +1602,7 @@ uh_vyok:        mov [hero_vy], ax
                 push ax
                 push word [hero_vy]
                 call addfixed
+                call collidey
 
                 ; ---- walls ----
                 mov ax, [camera_x]      ; left wall = left edge of screen
@@ -1428,15 +1618,19 @@ uh_leftok:      cmp word [hero_x], 944  ; right end of the level
                 mov word [hero_vx], 0
 uh_rightok:
 
-                ; ---- temporary floor ----
-                cmp word [hero_y], 160
-                jl uh_inair
+                ; ---- pit: fell below the map, go back to start ----
+                mov ax, [hero_y]
+                sub ax, [hero_h]
+                cmp ax, 192
+                jl uh_notpit
+                mov word [hero_x], 32
+                mov word [hero_xf], 0
                 mov word [hero_y], 160
                 mov word [hero_yf], 0
+                mov word [hero_vx], 0
                 mov word [hero_vy], 0
-                mov word [on_ground], 1
-                jmp uh_end
-uh_inair:       mov word [on_ground], 0
+                mov word [camera_x], 0
+uh_notpit:
 
 uh_end:         pop bx
                 pop ax

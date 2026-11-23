@@ -129,6 +129,19 @@ bufseg:         dw 0
 ; --- direction of Mario in the Part 5 test (+2 right, -2 left) ---
 mario_dir:      dw 2
 
+; --- keyboard: 128-byte key-state table (1 = held) ---
+keystate:       times 128 db 0
+
+; --- saved old keyboard vector (offset, segment) ---
+oldkb_off:      dw 0
+oldkb_seg:      dw 0
+
+; --- text for the Part 6 test ---
+msg_right:      db 'RIGHT'
+msg_shift:      db 'SHIFT'
+msg_space:      db 'SPACE'
+msg_len:        dw 5
+
 ; --- SPRITE: small Mario standing, 16x16 ---
 spr_mario_stand:
                 db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
@@ -929,85 +942,175 @@ wr_start:       in al, dx
                 pop ax
                 ret
 ; ------------------------------------------------------------
-; MAIN - Part 5 test: moving Mario, frame buffer
+; INTERRUPT HANDLER: kbisr
+; Purpose : our own keyboard interrupt (INT 09h)
+;           reads the scan code from port 60h and
+;           updates the key-state table
+; Inputs  : none (called by the hardware)
+; Outputs : keystate table changed
+; Changes : no register is changed
 ; ------------------------------------------------------------
-start:          mov ax, 0x0013          ; VGA mode 13h
-                int 0x10
-
-                mov ax, ds              ; frame buffer = free segment
-                add ax, 0x1000          ; right after our program
-                mov [bufseg], ax
-                mov [drawseg], ax       ; all drawing goes to the buffer
-
-                call resetmap
-                mov word [mario_x], 0
-                mov word [mario_dir], 2
-
-frameloop:      call clearbuf
-
-                mov ax, 0
-                push ax
-                call drawmap
-
-                ; Goomba (standing still)
-                mov ax, 250
-                push ax
-                mov ax, 144
-                push ax
-                mov ax, spr_goomba
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
-
-                ; Super Mario (standing still)
-                mov ax, 200
-                push ax
-                mov ax, 128
-                push ax
-                mov ax, spr_super_stand_bot
-                push ax
-                mov ax, 0
-                push ax
-                call drawsuper
-
-                ; small Mario: mirrored when moving left
-                mov bx, 0
-                cmp word [mario_dir], 0
-                jg faceright
-                mov bx, 1
-faceright:      push word [mario_x]
-                mov ax, 144
-                push ax
-                mov ax, spr_mario_run
-                push ax
+kbisr:          push ax
                 push bx
-                call drawsprite
+                push ds
 
-                call waitretrace
-                call copybuf
+                push cs
+                pop ds                  ; ds = our segment
 
-                ; move Mario
-                mov ax, [mario_x]
-                add ax, [mario_dir]
-                mov [mario_x], ax
-                cmp ax, 0
-                jle bounce
-                cmp ax, 304
-                jge bounce
-                jmp checkkey
-bounce:         neg word [mario_dir]
+                in al, 0x60             ; read the scan code
+                cmp al, 0xe0
+                je kb_done              ; ignore the E0 prefix byte
 
-checkkey:       mov ah, 0x01            ; is a key waiting?
-                int 0x16
-                jnz leave
-                jmp frameloop
+                mov bl, al
+                and bl, 0x7f            ; bl = key number (bit 7 removed)
+                mov bh, 0
+                test al, 0x80           ; bit 7 set = key release
+                jnz kb_release
+                mov byte [keystate+bx], 1
+                jmp kb_done
+kb_release:     mov byte [keystate+bx], 0
 
-leave:          mov ah, 0x00            ; take the key out
-                int 0x16
+kb_done:        mov al, 0x20
+                out 0x20, al            ; end of interrupt
 
-                mov ax, 0x0003          ; back to text mode
-                int 0x10
+                pop ds
+                pop bx
+                pop ax
+                iret
+
+; ------------------------------------------------------------
+; PROCEDURE: installkb
+; Purpose : saves the old keyboard vector and installs kbisr
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+installkb:      push ax
+                push bx
+                push es
+
+                mov ah, 0x35            ; get vector
+                mov al, 0x09
+                int 0x21                ; es:bx = old vector
+                mov [oldkb_off], bx
+                mov [oldkb_seg], es
+
+                push ds
+                mov dx, kbisr
+                mov ax, cs
+                mov ds, ax
+                mov ah, 0x25            ; set vector
+                mov al, 0x09
+                int 0x21
+                pop ds
+
+                pop es
+                pop bx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: restorekb
+; Purpose : puts the old keyboard vector back
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+restorekb:      push ax
+                push dx
+                push ds
+
+                mov dx, [oldkb_off]
+                mov ax, [oldkb_seg]
+                mov ds, ax
+                mov ah, 0x25
+                mov al, 0x09
+                int 0x21
+
+                pop ds
+                pop dx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: showtext
+; Purpose : prints a string in text mode at a given row
+; Inputs  : [bp+8] = row, [bp+6] = address, [bp+4] = length
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+showtext:       push bp
+                mov bp, sp
+                push es
+                push ax
+                push cx
+                push si
+                push di
+
+                mov ax, 0xb800
+                mov es, ax
+                mov al, 80
+                mul byte [bp+8]
+                shl ax, 1
+                mov di, ax
+                mov si, [bp+6]
+                mov cx, [bp+4]
+                mov ah, 0x07
+st_next:        mov al, [si]
+                mov [es:di], ax
+                add di, 2
+                add si, 1
+                loop st_next
+
+                pop di
+                pop si
+                pop cx
+                pop ax
+                pop es
+                pop bp
+                ret 6
+; ------------------------------------------------------------
+; MAIN - Part 6 test: keyboard table
+; Hold RIGHT, SHIFT, SPACE. The words show on screen.
+; Press ESC to exit.
+; ------------------------------------------------------------
+start:          call clrscr
+                call installkb
+
+testloop:       call clrscr
+
+                cmp byte [keystate+0x4d], 1     ; right arrow
+                jne no_right
+                mov ax, 2
+                push ax
+                mov ax, msg_right
+                push ax
+                push word [msg_len]
+                call showtext
+no_right:
+                cmp byte [keystate+0x2a], 1     ; left shift
+                jne no_shift
+                mov ax, 4
+                push ax
+                mov ax, msg_shift
+                push ax
+                push word [msg_len]
+                call showtext
+no_shift:
+                cmp byte [keystate+0x39], 1     ; space
+                jne no_space
+                mov ax, 6
+                push ax
+                mov ax, msg_space
+                push ax
+                push word [msg_len]
+                call showtext
+no_space:
+                cmp byte [keystate+0x01], 1     ; esc
+                jne testloop
+
+                call restorekb
+                call clrscr
 
                 mov ax, 0x4c00          ; exit to DOS
                 int 0x21

@@ -142,6 +142,33 @@ msg_shift:      db 'SHIFT'
 msg_space:      db 'SPACE'
 msg_len:        dw 5
 
+; --- 1 if the last keyboard byte was the E0 prefix ---
+kb_e0:          db 0
+
+; --- timer: tick counter, old vector, clock ---
+tickcount:      dw 0
+oldtm_off:      dw 0
+oldtm_seg:      dw 0
+tickpersec:     dw 0
+clocktime:      dw 300
+lasttick:       dw 0
+
+; --- hero (Mario) data ---
+; position = whole pixels (word) + fraction (0 to 255)
+; speed = 8.8 fixed point, signed (high byte = pixels, low byte = fraction)
+hero_x:         dw 32
+hero_xf:        dw 0
+hero_y:         dw 160          ; y of the FEET
+hero_yf:        dw 0
+hero_vx:        dw 0
+hero_vy:        dw 0
+on_ground:      dw 1
+facing:         dw 0            ; 0 = right, 1 = left
+space_prev:     dw 0            ; 1 if Space was held in the last frame
+
+; --- camera: world x of the left edge of the screen ---
+camera_x:       dw 0
+
 ; --- SPRITE: small Mario standing, 16x16 ---
 spr_mario_stand:
                 db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
@@ -487,6 +514,24 @@ fillrect:       push bp
                 mov es, ax
                 cld
 
+                ; ---- clip left (x < 0) ----
+                mov ax, [bp+12]
+                cmp ax, 0
+                jge fr_leftok
+                add [bp+8], ax          ; width = width + x
+                mov word [bp+12], 0
+fr_leftok:
+                ; ---- clip right (x + width > 320) ----
+                mov ax, [bp+12]
+                add ax, [bp+8]
+                cmp ax, 320
+                jle fr_rightok
+                mov ax, 320
+                sub ax, [bp+12]
+                mov [bp+8], ax
+fr_rightok:     cmp word [bp+8], 0
+                jle fr_end              ; nothing left to draw
+
                 mov ax, [bp+10]         ; ax = y
                 mov bx, ax
                 mov cl, 8
@@ -508,7 +553,7 @@ nextrow:        mov cx, [bp+8]          ; cx = width
                 dec dx
                 jnz nextrow
 
-                pop di
+fr_end:         pop di
                 pop dx
                 pop cx
                 pop bx
@@ -516,7 +561,6 @@ nextrow:        mov cx, [bp+8]          ; cx = width
                 pop es
                 pop bp
                 ret 10
-
 ; ------------------------------------------------------------
 ; PROCEDURE: resetmap
 ; Purpose : copies the original map into the working map
@@ -959,9 +1003,21 @@ kbisr:          push ax
 
                 in al, 0x60             ; read the scan code
                 cmp al, 0xe0
-                je kb_done              ; ignore the E0 prefix byte
+                jne kb_notprefix
+                mov byte [kb_e0], 1     ; remember the E0 prefix
+                jmp kb_done
 
+kb_notprefix:   cmp byte [kb_e0], 1
+                jne kb_normal
+                mov byte [kb_e0], 0     ; this byte follows an E0
                 mov bl, al
+                and bl, 0x7f
+                cmp bl, 0x2a
+                je kb_done              ; fake shift code, ignore
+                cmp bl, 0x36
+                je kb_done              ; fake shift code, ignore
+
+kb_normal:      mov bl, al
                 and bl, 0x7f            ; bl = key number (bit 7 removed)
                 mov bh, 0
                 test al, 0x80           ; bit 7 set = key release
@@ -1070,47 +1126,473 @@ st_next:        mov al, [si]
                 pop bp
                 ret 6
 ; ------------------------------------------------------------
-; MAIN - Part 6 test: keyboard table
-; Hold RIGHT, SHIFT, SPACE. The words show on screen.
-; Press ESC to exit.
+; INTERRUPT HANDLER: tmisr
+; Purpose : our timer interrupt (INT 08h), counts ticks
+;           then jumps to the old handler (chaining)
+; Inputs  : none (called by the hardware)
+; Outputs : tickcount is increased
+; Changes : no register is changed
 ; ------------------------------------------------------------
-start:          call clrscr
-                call installkb
+tmisr:          push ds
+                push cs
+                pop ds
+                inc word [tickcount]
+                pop ds
+                jmp far [cs:oldtm_off]  ; old handler ends the interrupt
 
-testloop:       call clrscr
+; ------------------------------------------------------------
+; PROCEDURE: installtimer
+; Purpose : saves the old timer vector and installs tmisr
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+installtimer:   push ax
+                push bx
+                push dx
+                push es
+
+                mov ah, 0x35
+                mov al, 0x08
+                int 0x21                ; es:bx = old vector
+                mov [oldtm_off], bx
+                mov [oldtm_seg], es
+
+                push ds
+                mov dx, tmisr
+                mov ax, cs
+                mov ds, ax
+                mov ah, 0x25
+                mov al, 0x08
+                int 0x21
+                pop ds
+
+                pop es
+                pop dx
+                pop bx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: restoretimer
+; Purpose : puts the old timer vector back
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+restoretimer:   push ax
+                push dx
+                push ds
+
+                mov dx, [oldtm_off]
+                mov ax, [oldtm_seg]
+                mov ds, ax
+                mov ah, 0x25
+                mov al, 0x08
+                int 0x21
+
+                pop ds
+                pop dx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: printnum
+; Purpose : prints a number (decimal) in text mode
+;           by repeated division by 10, digits kept on the stack
+; Inputs  : [bp+8] = row, [bp+6] = column, [bp+4] = number
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+printnum:       push bp
+                mov bp, sp
+                push es
+                push ax
+                push bx
+                push cx
+                push dx
+                push di
+
+                mov ax, 0xb800
+                mov es, ax
+                mov ax, [bp+4]          ; number
+                mov bx, 10
+                mov cx, 0               ; digit counter
+pn_nextdigit:   mov dx, 0
+                div bx                  ; ax = quotient, dx = remainder
+                add dl, 0x30
+                push dx
+                inc cx
+                cmp ax, 0
+                jnz pn_nextdigit
+
+                mov al, 80
+                mul byte [bp+8]         ; row * 80
+                add ax, [bp+6]          ; + column
+                shl ax, 1
+                mov di, ax
+pn_nextpos:     pop dx
+                mov dh, 0x07
+                mov [es:di], dx
+                add di, 2
+                loop pn_nextpos
+
+                pop di
+                pop dx
+                pop cx
+                pop bx
+                pop ax
+                pop es
+                pop bp
+                ret 6
+; ------------------------------------------------------------
+; PROCEDURE: setrate30
+; Purpose : sets the timer chip to 30 ticks per second
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+setrate30:      push ax
+                mov al, 0x36
+                out 0x43, al
+                mov ax, 39773           ; 1193182 / 30
+                out 0x40, al
+                mov al, ah
+                out 0x40, al
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: restorerate
+; Purpose : puts the timer chip back to 18.2 ticks per second
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+restorerate:    push ax
+                mov al, 0x36
+                out 0x43, al
+                mov al, 0
+                out 0x40, al
+                out 0x40, al
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: addfixed
+; Purpose : adds an 8.8 speed to a position (whole + fraction)
+; Inputs  : [bp+8] = address of whole part (word)
+;           [bp+6] = address of fraction (word, 0 to 255)
+;           [bp+4] = speed (signed 8.8)
+; Outputs : position changed
+; Changes : no register is changed
+; ------------------------------------------------------------
+addfixed:       push bp
+                mov bp, sp
+                push ax
+                push bx
+                push cx
+                push si
+
+                mov si, [bp+6]          ; address of fraction
+                mov ax, [si]
+                add ax, [bp+4]          ; fraction + speed
+                mov bx, ax
+                mov cl, 8
+                sar bx, cl              ; change in whole pixels (signed)
+                and ax, 0x00ff
+                mov [si], ax            ; new fraction
+                mov si, [bp+8]          ; address of whole part
+                add [si], bx
+
+                pop si
+                pop cx
+                pop bx
+                pop ax
+                pop bp
+                ret 6
+
+; ------------------------------------------------------------
+; PROCEDURE: updatehero
+; Purpose : reads the keys, changes speed, moves Mario
+;           (temporary floor at y=160, walls at x=0 and x=304)
+; Inputs  : keystate table, hero variables
+; Outputs : hero variables changed
+; Changes : no register is changed
+; ------------------------------------------------------------
+updatehero:     push ax
+                push bx
+
+                ; ---- speed limit: walk or run (either Shift) ----
+                mov bx, 0x0180
+                mov al, [keystate+0x2a]
+                or al, [keystate+0x36]
+                jz uh_gotlimit
+                mov bx, 0x0280
+uh_gotlimit:    mov ax, [hero_vx]
 
                 cmp byte [keystate+0x4d], 1     ; right arrow
-                jne no_right
-                mov ax, 2
-                push ax
-                mov ax, msg_right
-                push ax
-                push word [msg_len]
-                call showtext
-no_right:
-                cmp byte [keystate+0x2a], 1     ; left shift
-                jne no_shift
-                mov ax, 4
-                push ax
-                mov ax, msg_shift
-                push ax
-                push word [msg_len]
-                call showtext
-no_shift:
+                jne uh_notright
+                cmp byte [keystate+0x4b], 1     ; both keys = no move
+                je uh_friction
+                mov word [facing], 0
+                cmp ax, 0
+                jl uh_brake_r
+                add ax, 0x0020
+                cmp ax, bx
+                jle uh_store
+                mov ax, bx
+                jmp uh_store
+uh_brake_r:     add ax, 0x0040
+                jmp uh_store
+
+uh_notright:    cmp byte [keystate+0x4b], 1     ; left arrow
+                jne uh_friction
+                mov word [facing], 1
+                cmp ax, 0
+                jg uh_brake_l
+                sub ax, 0x0020
+                neg bx
+                cmp ax, bx
+                jge uh_store
+                mov ax, bx
+                jmp uh_store
+uh_brake_l:     sub ax, 0x0040
+                jmp uh_store
+
+uh_friction:    cmp ax, 0
+                jg uh_fric_pos
+                jl uh_fric_neg
+                jmp uh_store
+uh_fric_pos:    sub ax, 0x0010
+                jge uh_store
+                mov ax, 0
+                jmp uh_store
+uh_fric_neg:    add ax, 0x0010
+                jle uh_store
+                mov ax, 0
+uh_store:       mov [hero_vx], ax
+
+                ; ---- jump ----
                 cmp byte [keystate+0x39], 1     ; space
-                jne no_space
-                mov ax, 6
+                jne uh_nospace
+                cmp word [space_prev], 0
+                jne uh_jumpdone                 ; Space was already held
+                cmp word [on_ground], 1
+                jne uh_jumpdone                 ; no jump in the air
+                mov word [hero_vy], 0xFA80      ; -5.5
+                mov word [on_ground], 0
+                jmp uh_jumpdone
+uh_nospace:     cmp word [hero_vy], 0xFE00      ; -2.0
+                jge uh_jumpdone
+                mov word [hero_vy], 0xFE00      ; cut the jump short
+uh_jumpdone:    mov al, [keystate+0x39]
+                mov ah, 0
+                mov [space_prev], ax
+
+                ; ---- gravity ----
+                mov ax, [hero_vy]
+                add ax, 0x0040
+                cmp ax, 0x0400
+                jle uh_vyok
+                mov ax, 0x0400
+uh_vyok:        mov [hero_vy], ax
+
+                ; ---- move x ----
+                mov ax, hero_x
                 push ax
-                mov ax, msg_space
+                mov ax, hero_xf
                 push ax
-                push word [msg_len]
-                call showtext
-no_space:
+                push word [hero_vx]
+                call addfixed
+
+                ; ---- move y ----
+                mov ax, hero_y
+                push ax
+                mov ax, hero_yf
+                push ax
+                push word [hero_vy]
+                call addfixed
+
+                ; ---- walls ----
+                mov ax, [camera_x]      ; left wall = left edge of screen
+                cmp [hero_x], ax
+                jge uh_leftok
+                mov [hero_x], ax
+                mov word [hero_xf], 0
+                mov word [hero_vx], 0
+uh_leftok:      cmp word [hero_x], 944  ; right end of the level
+                jle uh_rightok
+                mov word [hero_x], 944
+                mov word [hero_xf], 0
+                mov word [hero_vx], 0
+uh_rightok:
+
+                ; ---- temporary floor ----
+                cmp word [hero_y], 160
+                jl uh_inair
+                mov word [hero_y], 160
+                mov word [hero_yf], 0
+                mov word [hero_vy], 0
+                mov word [on_ground], 1
+                jmp uh_end
+uh_inair:       mov word [on_ground], 0
+
+uh_end:         pop bx
+                pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: updatecamera
+; Purpose : camera rule of section 5.3 (follow Mario past screen
+;           x 160, never go back, stop at 640)
+; Inputs  : hero_x, camera_x
+; Outputs : camera_x changed
+; Changes : no register is changed
+; ------------------------------------------------------------
+updatecamera:   push ax
+
+                mov ax, [hero_x]
+                sub ax, [camera_x]      ; ax = screen x of Mario
+                cmp ax, 160
+                jle uc_end              ; not past the middle
+                mov ax, [hero_x]
+                sub ax, 160             ; wanted camera
+                cmp ax, 640
+                jle uc_limited
+                mov ax, 640             ; last camera position
+uc_limited:     cmp ax, [camera_x]
+                jle uc_end              ; never decrease
+                mov [camera_x], ax
+uc_end:         pop ax
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: drawmapscroll
+; Purpose : draws the map with pixel scrolling
+;           (21 columns, first column = camera / 16,
+;            shifted left by camera mod 16)
+; Inputs  : [bp+4] = camera x
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+drawmapscroll:  push bp
+                mov bp, sp
+                push ax
+                push bx
+                push cx
+                push dx
+                push si
+
+                mov dx, 1               ; dx = row (1 to 11)
+dms_row:        mov cx, 0               ; cx = screen column (0 to 20)
+
+dms_col:        mov si, [bp+4]
+                shr si, 1
+                shr si, 1
+                shr si, 1
+                shr si, 1               ; si = first column
+                add si, cx              ; si = map column
+                cmp si, 60
+                jge dms_skip            ; outside the level
+
+                mov al, dl
+                mov bl, 60
+                mul bl                  ; ax = row * 60
+                add si, ax
+                mov al, [workmap+si]    ; al = tile code
+                mov ah, 0
+
+                mov bx, cx
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1               ; bx = column * 16
+                mov si, [bp+4]
+                and si, 15              ; si = camera mod 16
+                sub bx, si              ; x = column*16 - offset
+                push bx
+                mov bx, dx
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1
+                shl bx, 1               ; y = row * 16
+                push bx
+                push ax                 ; tile code
+                call drawtile
+
+dms_skip:       inc cx
+                cmp cx, 21
+                jne dms_col
+
+                inc dx
+                cmp dx, 12
+                jne dms_row
+
+                pop si
+                pop dx
+                pop cx
+                pop bx
+                pop ax
+                pop bp
+                ret 2
+
+; ------------------------------------------------------------
+; MAIN - Part 9 test: scrolling camera
+; Arrows = walk, Shift = run, Space = jump, Esc = exit
+; ------------------------------------------------------------
+start:          mov ax, 0x0013          ; VGA mode 13h
+                int 0x10
+
+                mov ax, ds              ; frame buffer = free segment
+                add ax, 0x1000
+                mov [bufseg], ax
+                mov [drawseg], ax
+
+                call resetmap
+                call installkb
+                call installtimer
+                call setrate30
+
+gameloop:       mov ax, [tickcount]     ; wait for the next timer tick
+waitframe:      cmp ax, [tickcount]
+                je waitframe
+
+                call updatehero
+                call updatecamera
+
+                call clearbuf
+                push word [camera_x]
+                call drawmapscroll
+
+                ; choose the pose
+                mov bx, spr_mario_stand
+                cmp word [hero_vx], 0
+                je pose_nomove
+                mov bx, spr_mario_run
+pose_nomove:    cmp word [on_ground], 1
+                je pose_done
+                mov bx, spr_mario_jump
+pose_done:      mov ax, [hero_x]
+                sub ax, [camera_x]      ; screen x = world x - camera x
+                push ax
+                mov ax, [hero_y]
+                sub ax, 16              ; top of sprite = feet - 16
+                push ax
+                push bx
+                push word [facing]
+                call drawsprite
+
+                call copybuf
+
                 cmp byte [keystate+0x01], 1     ; esc
-                jne testloop
+                jne gameloop
 
+                call restorerate
+                call restoretimer
                 call restorekb
-                call clrscr
 
+                mov ax, 0x0003          ; back to text mode
+                int 0x10
                 mov ax, 0x4c00          ; exit to DOS
                 int 0x21

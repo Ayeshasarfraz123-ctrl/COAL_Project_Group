@@ -123,6 +123,12 @@ workmap:        times 720 db 0
 ; --- where drawing goes (0xa000 = screen). Changes in Part 5 ---
 drawseg:        dw 0xa000
 
+; --- frame buffer segment (set in start) ---
+bufseg:         dw 0
+
+; --- direction of Mario in the Part 5 test (+2 right, -2 left) ---
+mario_dir:      dw 2
+
 ; --- SPRITE: small Mario standing, 16x16 ---
 spr_mario_stand:
                 db 0,0,0,0,4,4,4,4,4,0,0,0,0,0,0,0
@@ -423,7 +429,7 @@ putpixel:       push bp
                 push cx
                 push di
 
-                mov ax, 0xa000
+                mov ax, [drawseg]
                 mov es, ax
 
                 mov ax, [bp+6]          ; ax = y
@@ -464,7 +470,7 @@ fillrect:       push bp
                 push dx
                 push di
 
-                mov ax, 0xa000
+                mov ax, [drawseg]
                 mov es, ax
                 cld
 
@@ -844,130 +850,160 @@ drawsuper:      push bp
                 pop bp
                 ret 8
 ; ------------------------------------------------------------
-; MAIN - Part 4 test: all sprites
+; PROCEDURE: clearbuf
+; Purpose : clears the whole frame buffer to black (block fill)
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+clearbuf:       push es
+                push ax
+                push cx
+                push di
+
+                mov ax, [drawseg]
+                mov es, ax
+                cld
+                mov di, 0
+                mov ax, 0
+                mov cx, 32000           ; 32000 words = 64000 bytes
+                rep stosw
+
+                pop di
+                pop cx
+                pop ax
+                pop es
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: copybuf
+; Purpose : copies the frame buffer to video memory (block move)
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+copybuf:        push ds
+                push es
+                push ax
+                push cx
+                push si
+                push di
+
+                mov ax, 0xa000
+                mov es, ax              ; destination = screen
+                mov ax, [bufseg]
+                mov ds, ax              ; source = frame buffer
+                cld
+                mov si, 0
+                mov di, 0
+                mov cx, 32000
+                rep movsw
+
+                pop di
+                pop si
+                pop cx
+                pop ax
+                pop es
+                pop ds
+                ret
+
+; ------------------------------------------------------------
+; PROCEDURE: waitretrace
+; Purpose : waits for the vertical retrace (test only, Part 5)
+; Inputs  : none
+; Outputs : none
+; Changes : no register is changed
+; ------------------------------------------------------------
+waitretrace:    push ax
+                push dx
+
+                mov dx, 0x3da
+wr_end:         in al, dx
+                test al, 8
+                jnz wr_end              ; wait until retrace is over
+wr_start:       in al, dx
+                test al, 8
+                jz wr_start             ; wait until a new retrace starts
+
+                pop dx
+                pop ax
+                ret
+; ------------------------------------------------------------
+; MAIN - Part 5 test: moving Mario, frame buffer
 ; ------------------------------------------------------------
 start:          mov ax, 0x0013          ; VGA mode 13h
                 int 0x10
 
+                mov ax, ds              ; frame buffer = free segment
+                add ax, 0x1000          ; right after our program
+                mov [bufseg], ax
+                mov [drawseg], ax       ; all drawing goes to the buffer
+
                 call resetmap
+                mov word [mario_x], 0
+                mov word [mario_dir], 2
+
+frameloop:      call clearbuf
+
                 mov ax, 0
                 push ax
                 call drawmap
 
-                ; --- row 1 (y=40): Mario run, Mario jump ---
-                mov ax, 20
+                ; Goomba (standing still)
+                mov ax, 250
                 push ax
-                mov ax, 40
+                mov ax, 144
+                push ax
+                mov ax, spr_goomba
+                push ax
+                mov ax, 0
+                push ax
+                call drawsprite
+
+                ; Super Mario (standing still)
+                mov ax, 200
+                push ax
+                mov ax, 128
+                push ax
+                mov ax, spr_super_stand_bot
+                push ax
+                mov ax, 0
+                push ax
+                call drawsuper
+
+                ; small Mario: mirrored when moving left
+                mov bx, 0
+                cmp word [mario_dir], 0
+                jg faceright
+                mov bx, 1
+faceright:      push word [mario_x]
+                mov ax, 144
                 push ax
                 mov ax, spr_mario_run
                 push ax
-                mov ax, 0
-                push ax
+                push bx
                 call drawsprite
 
-                mov ax, 50
-                push ax
-                mov ax, 40
-                push ax
-                mov ax, spr_mario_jump
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
+                call waitretrace
+                call copybuf
 
-                ; --- row 2 (y=70): goomba flat, koopa, shell, mushroom, coin ---
-                mov ax, 20
-                push ax
-                mov ax, 70
-                push ax
-                mov ax, spr_goomba_flat
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
+                ; move Mario
+                mov ax, [mario_x]
+                add ax, [mario_dir]
+                mov [mario_x], ax
+                cmp ax, 0
+                jle bounce
+                cmp ax, 304
+                jge bounce
+                jmp checkkey
+bounce:         neg word [mario_dir]
 
-                mov ax, 50
-                push ax
-                mov ax, 70
-                push ax
-                mov ax, spr_koopa
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
+checkkey:       mov ah, 0x01            ; is a key waiting?
+                int 0x16
+                jnz leave
+                jmp frameloop
 
-                mov ax, 80
-                push ax
-                mov ax, 70
-                push ax
-                mov ax, spr_shell
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
-
-                mov ax, 110
-                push ax
-                mov ax, 70
-                push ax
-                mov ax, spr_mushroom
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
-
-                mov ax, 140
-                push ax
-                mov ax, 70
-                push ax
-                mov ax, spr_coin
-                push ax
-                mov ax, 0
-                push ax
-                call drawsprite
-
-                ; --- row 3 (y=100): Super Mario stand, run, jump, mirrored ---
-                mov ax, 20
-                push ax
-                mov ax, 100
-                push ax
-                mov ax, spr_super_stand_bot
-                push ax
-                mov ax, 0
-                push ax
-                call drawsuper
-
-                mov ax, 50
-                push ax
-                mov ax, 100
-                push ax
-                mov ax, spr_super_run_bot
-                push ax
-                mov ax, 0
-                push ax
-                call drawsuper
-
-                mov ax, 80
-                push ax
-                mov ax, 100
-                push ax
-                mov ax, spr_super_jump_bot
-                push ax
-                mov ax, 0
-                push ax
-                call drawsuper
-
-                mov ax, 110
-                push ax
-                mov ax, 100
-                push ax
-                mov ax, spr_super_stand_bot
-                push ax
-                mov ax, 1
-                push ax
-                call drawsuper
-
-                mov ah, 0x00            ; wait for a key
+leave:          mov ah, 0x00            ; take the key out
                 int 0x16
 
                 mov ax, 0x0003          ; back to text mode

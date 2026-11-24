@@ -12,7 +12,9 @@ Deadline: 29-11-2026
 ## 1. Team
 
 **Group:** 06  (Section: BSE-3A)
+ 
 **Instructor:** Muhammad Talha Dar
+
 **Repository:** https://github.com/Ayeshasarfraz123-ctrl/COAL_Project_Group
 
 | Name | Roll number | Modules built |

@@ -282,7 +282,7 @@ These are small extras beyond the manual. They are optional and none of them cha
 - **Mario blinks** while he is invulnerable after being hurt.
 - **Coin pop-up**: a coin jumps out of a "?" block when it is hit.
 - **Win sequence**: Mario slides down the pole and walks to the castle; the time bonus is shown on the Level complete screen.
-- **Pause screen** and a **title menu** with START and EXIT.
+
 
 (No sound, no second level, no saved high score, no fire flower and no "hurry" blink.)
 
